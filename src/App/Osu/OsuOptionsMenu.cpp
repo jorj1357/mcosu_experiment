@@ -451,11 +451,13 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_win_snd_fallback_dsound_ref = convar->getConVarByName("win_snd_fallback_dsound");
 	m_win_snd_wasapi_buffer_size_ref = convar->getConVarByName("win_snd_wasapi_buffer_size", false);
 	m_win_snd_wasapi_period_size_ref = convar->getConVarByName("win_snd_wasapi_period_size", false);
-	m_osu_notelock_type_ref = convar->getConVarByName("osu_notelock_type");
-	m_osu_drain_type_ref = convar->getConVarByName("osu_drain_type");
-	m_osu_background_color_r_ref = convar->getConVarByName("osu_background_color_r");
-	m_osu_background_color_g_ref = convar->getConVarByName("osu_background_color_g");
-	m_osu_background_color_b_ref = convar->getConVarByName("osu_background_color_b");
+        m_osu_notelock_type_ref = convar->getConVarByName("osu_notelock_type");
+        m_osu_drain_type_ref = convar->getConVarByName("osu_drain_type");
+        m_osu_background_color_r_ref = convar->getConVarByName("osu_background_color_r");
+        m_osu_background_color_g_ref = convar->getConVarByName("osu_background_color_g");
+        m_osu_background_color_b_ref = convar->getConVarByName("osu_background_color_b");
+       m_osu_metronome_divisor_ref = convar->getConVarByName("osu_metronome_divisor");
+       m_osu_metronome_sound_ref = convar->getConVarByName("osu_metronome_sound");
 
 	// convar callbacks
 	convar->getConVarByName("osu_skin_use_skin_hitsounds")->setCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onUseSkinsSoundSamplesChange) );
@@ -512,11 +514,11 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_iNumResetEverythingPressed = 0;
 
 	m_iManiaK = 0;
-	m_iManiaKey = 0;
+        m_iManiaKey = 0;
 
-	m_fSearchOnCharKeybindHackTime = 0.0f;
+        m_fSearchOnCharKeybindHackTime = 0.0f;
 
-	m_notelockTypes.push_back("None");
+        m_notelockTypes.push_back("None");
 	m_notelockTypes.push_back("McOsu");
 	m_notelockTypes.push_back("osu!stable (default)");
 	m_notelockTypes.push_back("osu!lazer 2020");
@@ -524,8 +526,20 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_drainTypes.push_back("None");
 	m_drainTypes.push_back("VR");
 	m_drainTypes.push_back("osu!stable (default)");
-	m_drainTypes.push_back("osu!lazer 2020");
-	m_drainTypes.push_back("osu!lazer 2018");
+        m_drainTypes.push_back("osu!lazer 2020");
+        m_drainTypes.push_back("osu!lazer 2018");
+
+       m_metronomeDivisions.push_back("1/1"); m_metronomeDivisionValues.push_back(1);
+       m_metronomeDivisions.push_back("1/2"); m_metronomeDivisionValues.push_back(2);
+       m_metronomeDivisions.push_back("1/3"); m_metronomeDivisionValues.push_back(3);
+       m_metronomeDivisions.push_back("1/4"); m_metronomeDivisionValues.push_back(4);
+       m_metronomeDivisions.push_back("1/6"); m_metronomeDivisionValues.push_back(6);
+       m_metronomeDivisions.push_back("1/7"); m_metronomeDivisionValues.push_back(7);
+       m_metronomeDivisions.push_back("1/8"); m_metronomeDivisionValues.push_back(8);
+       m_metronomeDivisions.push_back("1/12"); m_metronomeDivisionValues.push_back(12);
+       m_metronomeDivisions.push_back("1/16"); m_metronomeDivisionValues.push_back(16);
+       m_metronomeDivisions.push_back("1/32"); m_metronomeDivisionValues.push_back(32);
+       m_metronomeDivisions.push_back("1/64"); m_metronomeDivisionValues.push_back(64);
 
 	m_container = new CBaseUIContainer(-1, 0, 0, 0, "");
 
@@ -812,10 +826,21 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	musicVolumeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	musicVolumeSlider->setKeyDelta(0.01f);
 	CBaseUISlider *effectsVolumeSlider = addSlider("Effects:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_effects"), 70.0f);
-	effectsVolumeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
-	effectsVolumeSlider->setKeyDelta(0.01f);
+        effectsVolumeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+        effectsVolumeSlider->setKeyDelta(0.01f);
 
-	addSubSection("Offset Adjustment");
+       addSubSection("Metronome");
+       addCheckbox("Enable", convar->getConVarByName("osu_metronome"));
+       OPTIONS_ELEMENT metDiv = addButton("Subdivision", "");
+       m_metronomeDivisionButton = metDiv.elements[0];
+       m_metronomeDivisionLabel = (CBaseUILabel*)metDiv.elements[1];
+       ((CBaseUIButton*)m_metronomeDivisionButton)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onMetronomeDivisionSelect) );
+       OPTIONS_ELEMENT metSound = addButton("Sound", m_osu_metronome_sound_ref->getString());
+       m_metronomeSoundButton = metSound.elements[0];
+       m_metronomeSoundLabel = (CBaseUILabel*)metSound.elements[1];
+       ((CBaseUIButton*)m_metronomeSoundButton)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onMetronomeSoundSelect) );
+
+        addSubSection("Offset Adjustment");
 	CBaseUISlider *offsetSlider = addSlider("Universal Offset:", -300.0f, 300.0f, convar->getConVarByName("osu_universal_offset"));
 	offsetSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeIntMS) );
 	offsetSlider->setKeyDelta(1);
@@ -1908,9 +1933,11 @@ void OsuOptionsMenu::updateLayout()
 		m_fullscreenCheckbox->setChecked(env->isFullscreen(), false);
 
 	updateVRRenderTargetResolutionLabel();
-	updateSkinNameLabel();
-	updateNotelockSelectLabel();
-	updateHPDrainSelectLabel();
+        updateSkinNameLabel();
+        updateNotelockSelectLabel();
+        updateHPDrainSelectLabel();
+       updateMetronomeDivisionLabel();
+        updateMetronomeSoundLabel();
 
 	if (m_outputDeviceLabel != NULL)
 		m_outputDeviceLabel->setText(engine->getSound()->getOutputDevice());
@@ -2437,9 +2464,32 @@ void OsuOptionsMenu::updateNotelockSelectLabel()
 
 void OsuOptionsMenu::updateHPDrainSelectLabel()
 {
-	if (m_hpDrainSelectLabel == NULL) return;
+        if (m_hpDrainSelectLabel == NULL) return;
 
-	m_hpDrainSelectLabel->setText(m_drainTypes[clamp<int>(m_osu_drain_type_ref->getInt(), 0, m_drainTypes.size() - 1)]);
+        m_hpDrainSelectLabel->setText(m_drainTypes[clamp<int>(m_osu_drain_type_ref->getInt(), 0, m_drainTypes.size() - 1)]);
+}
+
+void OsuOptionsMenu::updateMetronomeDivisionLabel()
+{
+       if (m_metronomeDivisionLabel == NULL) return;
+
+       int val = m_osu_metronome_divisor_ref->getInt();
+       for (size_t i=0;i<m_metronomeDivisionValues.size();i++)
+       {
+               if (m_metronomeDivisionValues[i] == val)
+               {
+                       m_metronomeDivisionLabel->setText(m_metronomeDivisions[i]);
+                       return;
+               }
+       }
+       m_metronomeDivisionLabel->setText(UString::format("1/%d", val));
+}
+
+void OsuOptionsMenu::updateMetronomeSoundLabel()
+{
+       if (m_metronomeSoundLabel == NULL) return;
+
+       m_metronomeSoundLabel->setText(m_osu_metronome_sound_ref->getString());
 }
 
 void OsuOptionsMenu::onFullscreenChange(CBaseUICheckbox *checkbox)
@@ -2998,8 +3048,68 @@ void OsuOptionsMenu::onHPDrainSelectResetClicked()
 
 void OsuOptionsMenu::onHPDrainSelectResetUpdate()
 {
-	if (m_hpDrainSelectResetButton != NULL)
-		m_hpDrainSelectResetButton->setEnabled(m_osu_drain_type_ref->getInt() != (int)m_osu_drain_type_ref->getDefaultFloat());
+        if (m_hpDrainSelectResetButton != NULL)
+                m_hpDrainSelectResetButton->setEnabled(m_osu_drain_type_ref->getInt() != (int)m_osu_drain_type_ref->getDefaultFloat());
+}
+
+void OsuOptionsMenu::onMetronomeDivisionSelect()
+{
+       m_contextMenu->setPos(m_metronomeDivisionButton->getPos());
+       m_contextMenu->setRelPos(m_metronomeDivisionButton->getRelPos());
+       m_contextMenu->begin(m_metronomeDivisionButton->getSize().x);
+       {
+               for (int i=0; i<m_metronomeDivisions.size(); i++)
+               {
+                       CBaseUIButton *button = m_contextMenu->addButton(m_metronomeDivisions[i], i);
+                       if (m_metronomeDivisionValues[i] == m_osu_metronome_divisor_ref->getInt())
+                               button->setTextBrightColor(0xff00ff00);
+               }
+       }
+       m_contextMenu->end(false, false);
+       m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onMetronomeDivisionSelect2) );
+}
+
+void OsuOptionsMenu::onMetronomeDivisionSelect2(UString division, int id)
+{
+       if (id >= 0 && id < (int)m_metronomeDivisionValues.size())
+       {
+               m_osu_metronome_divisor_ref->setValue(m_metronomeDivisionValues[id]);
+               updateMetronomeDivisionLabel();
+       }
+}
+
+void OsuOptionsMenu::onMetronomeSoundSelect()
+{
+       std::vector<UString> sounds;
+       {
+               UString skinPath = m_osu->getSkin()->getFilePath();
+               std::vector<UString> skinFiles = env->getFilesInFolder(skinPath);
+               sounds.insert(sounds.end(), skinFiles.begin(), skinFiles.end());
+       }
+       {
+               std::vector<UString> metFiles = env->getFilesInFolder("./Metronome/");
+               sounds.insert(sounds.end(), metFiles.begin(), metFiles.end());
+       }
+
+       m_contextMenu->setPos(m_metronomeSoundButton->getPos());
+       m_contextMenu->setRelPos(m_metronomeSoundButton->getRelPos());
+       m_contextMenu->begin(m_metronomeSoundButton->getSize().x);
+       {
+               for (int i=0; i<sounds.size(); i++)
+               {
+                       CBaseUIButton *button = m_contextMenu->addButton(sounds[i], i);
+                       if (sounds[i] == m_osu_metronome_sound_ref->getString())
+                               button->setTextBrightColor(0xff00ff00);
+               }
+       }
+       m_contextMenu->end(false, false);
+       m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onMetronomeSoundSelect2) );
+}
+
+void OsuOptionsMenu::onMetronomeSoundSelect2(UString sound, int id)
+{
+       m_osu_metronome_sound_ref->setValue(sound);
+       updateMetronomeSoundLabel();
 }
 
 void OsuOptionsMenu::onCheckboxChange(CBaseUICheckbox *checkbox)

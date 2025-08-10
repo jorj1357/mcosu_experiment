@@ -143,10 +143,17 @@ private:
 	void onNotelockSelect2(UString notelockType, int id = -1);
 	void onNotelockSelectResetClicked();
 	void onNotelockSelectResetUpdate();
-	void onHPDrainSelect();
-	void onHPDrainSelect2(UString hpDrainType, int id = -1);
-	void onHPDrainSelectResetClicked();
-	void onHPDrainSelectResetUpdate();
+        void onHPDrainSelect();
+        void onHPDrainSelect2(UString hpDrainType, int id = -1);
+        void onHPDrainSelectResetClicked();
+        void onHPDrainSelectResetUpdate();
+
+       void onMetronomeDivisionSelect();
+       void onMetronomeDivisionSelect2(UString division, int id = -1);
+       void onMetronomeSoundSelect();
+       void onMetronomeSoundSelect2(UString sound, int id = -1);
+       void updateMetronomeDivisionLabel();
+       void updateMetronomeSoundLabel();
 
 	void onCheckboxChange(CBaseUICheckbox *checkbox);
 	void onSliderChange(CBaseUISlider *slider);
@@ -270,12 +277,16 @@ private:
 	CBaseUIElement *m_skinSection;
 	CBaseUISlider *m_uiScaleSlider;
 	OsuOptionsMenuResetButton *m_uiScaleResetButton;
-	CBaseUIElement *m_notelockSelectButton;
-	CBaseUILabel *m_notelockSelectLabel;
-	OsuOptionsMenuResetButton *m_notelockSelectResetButton;
-	CBaseUIElement *m_hpDrainSelectButton;
-	CBaseUILabel *m_hpDrainSelectLabel;
-	OsuOptionsMenuResetButton *m_hpDrainSelectResetButton;
+        CBaseUIElement *m_notelockSelectButton;
+        CBaseUILabel *m_notelockSelectLabel;
+        OsuOptionsMenuResetButton *m_notelockSelectResetButton;
+        CBaseUIElement *m_hpDrainSelectButton;
+        CBaseUILabel *m_hpDrainSelectLabel;
+        OsuOptionsMenuResetButton *m_hpDrainSelectResetButton;
+       CBaseUIElement *m_metronomeDivisionButton;
+       CBaseUILabel *m_metronomeDivisionLabel;
+       CBaseUIElement *m_metronomeSoundButton;
+       CBaseUILabel *m_metronomeSoundLabel;
 
 	ConVar *m_waitingKey;
 	ConVar *m_osu_slider_curve_points_separation_ref;
@@ -288,14 +299,16 @@ private:
 	ConVar *m_osu_skin_workshop_id_ref;
 	ConVar *m_osu_skin_random_ref;
 	ConVar *m_osu_ui_scale_ref;
-	ConVar *m_win_snd_fallback_dsound_ref;
-	ConVar *m_win_snd_wasapi_buffer_size_ref;
-	ConVar *m_win_snd_wasapi_period_size_ref;
-	ConVar *m_osu_notelock_type_ref;
-	ConVar *m_osu_drain_type_ref;
-	ConVar *m_osu_background_color_r_ref;
-	ConVar *m_osu_background_color_g_ref;
-	ConVar *m_osu_background_color_b_ref;
+        ConVar *m_win_snd_fallback_dsound_ref;
+        ConVar *m_win_snd_wasapi_buffer_size_ref;
+        ConVar *m_win_snd_wasapi_period_size_ref;
+        ConVar *m_osu_notelock_type_ref;
+        ConVar *m_osu_drain_type_ref;
+        ConVar *m_osu_background_color_r_ref;
+        ConVar *m_osu_background_color_g_ref;
+        ConVar *m_osu_background_color_b_ref;
+       ConVar *m_osu_metronome_divisor_ref;
+       ConVar *m_osu_metronome_sound_ref;
 
 	float m_fOsuFolderTextboxInvalidAnim;
 	float m_fVibrationStrengthExampleTimer;
@@ -318,11 +331,15 @@ private:
 	UString m_sSearchString;
 	float m_fSearchOnCharKeybindHackTime;
 
-	// notelock
-	std::vector<UString> m_notelockTypes;
+        // notelock
+        std::vector<UString> m_notelockTypes;
 
-	// drain
-	std::vector<UString> m_drainTypes;
+        // drain
+        std::vector<UString> m_drainTypes;
+
+       // metronome
+       std::vector<UString> m_metronomeDivisions;
+       std::vector<int> m_metronomeDivisionValues;
 };
 
 #endif

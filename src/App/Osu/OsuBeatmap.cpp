@@ -59,6 +59,10 @@ ConVar osu_combobreak_sound_combo("osu_combobreak_sound_combo", 20, FCVAR_NONE, 
 ConVar osu_beatmap_preview_mods_live("osu_beatmap_preview_mods_live", false, FCVAR_NONE, "whether to immediately apply all currently selected mods while browsing beatmaps (e.g. speed/pitch)");
 ConVar osu_beatmap_preview_music_loop("osu_beatmap_preview_music_loop", true, FCVAR_NONE);
 
+ConVar osu_metronome("osu_metronome", false, FCVAR_NONE, "Enable metronome while playing");
+ConVar osu_metronome_divisor("osu_metronome_divisor", 4, FCVAR_NONE, "Note division for metronome clicks");
+ConVar osu_metronome_sound("osu_metronome_sound", "metronome.wav", FCVAR_NONE, "Metronome sound file");
+
 ConVar osu_ar_override("osu_ar_override", -1.0f, FCVAR_NONE, "use this to override between AR 0 and AR 12.5+. active if value is more than or equal to 0.");
 ConVar osu_ar_overridenegative("osu_ar_overridenegative", 0.0f, FCVAR_NONE, "use this to override below AR 0. active if value is less than 0, disabled otherwise. this override always overrides the other override.");
 ConVar osu_cs_override("osu_cs_override", -1.0f, FCVAR_NONE, "use this to override between CS 0 and CS 12.1429. active if value is more than or equal to 0.");
@@ -200,19 +204,21 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 
 	m_selectedDifficulty2 = NULL;
 
-	m_music = NULL;
+        m_music = NULL;
+        m_metronomeSound = NULL;
 
-	m_fMusicFrequencyBackup = 44100.0f;
-	m_iCurMusicPos = 0;
-	m_iCurMusicPosWithOffsets = 0;
-	m_bWasSeekFrame = false;
-	m_fInterpolatedMusicPos = 0.0;
-	m_fLastAudioTimeAccurateSet = 0.0;
+        m_fMusicFrequencyBackup = 44100.0f;
+        m_iCurMusicPos = 0;
+        m_iCurMusicPosWithOffsets = 0;
+        m_bWasSeekFrame = false;
+        m_fInterpolatedMusicPos = 0.0;
+        m_fLastAudioTimeAccurateSet = 0.0;
 	m_fLastRealTimeForInterpolationDelta = 0.0;
 	m_iResourceLoadUpdateDelayHack = 0;
 	m_bForceStreamPlayback = true; // if this is set to true here, then the music will always be loaded as a stream (meaning slow disk access could cause audio stalling/stuttering)
 	m_fAfterMusicIsFinishedVirtualAudioTimeStart = -1.0f;
-	m_bIsFirstMissSound = true;
+        m_bIsFirstMissSound = true;
+        m_fNextMetronomeTime = 0.0;
 
 	m_bFailed = false;
 	m_fFailAnim = 1.0f;
@@ -585,9 +591,21 @@ void OsuBeatmap::update()
 		- m_selectedDifficulty2->getLocalOffset()
 		- m_selectedDifficulty2->getOnlineOffset()
 		- (m_selectedDifficulty2->getVersion() < 5 ? osu_old_beatmap_offset.getInt() : 0);
-	updateTimingPoints(m_iCurMusicPosWithOffsets);
+        updateTimingPoints(m_iCurMusicPosWithOffsets);
 
-	// for performance reasons, a lot of operations are crammed into 1 loop over all hitobjects:
+        if (osu_metronome.getBool() && m_metronomeSound != NULL)
+        {
+                const int div = std::max(1, osu_metronome_divisor.getInt());
+                while ((double)m_iCurMusicPosWithOffsets >= m_fNextMetronomeTime)
+                {
+                        engine->getSound()->play(m_metronomeSound);
+                        OsuDatabaseBeatmap::TIMING_INFO mt = m_selectedDifficulty2->getTimingInfoForTime((long)m_fNextMetronomeTime);
+                        const double interval = mt.beatLength / (double)div;
+                        m_fNextMetronomeTime += interval;
+                }
+        }
+
+        // for performance reasons, a lot of operations are crammed into 1 loop over all hitobjects:
 	// update all hitobjects,
 	// handle click events,
 	// also get the time of the next/previous hitobject and their indices for later,
@@ -1432,8 +1450,27 @@ bool OsuBeatmap::play()
 	onLoad();
 
 	// load music
-	unloadMusicInt(); // need to reload in case of speed/pitch changes (just to be sure)
-	loadMusic(false, m_bForceStreamPlayback);
+        unloadMusicInt(); // need to reload in case of speed/pitch changes (just to be sure)
+        loadMusic(false, m_bForceStreamPlayback);
+
+        if (m_metronomeSound != NULL)
+        {
+                engine->getResourceManager()->destroyResource(m_metronomeSound);
+                m_metronomeSound = NULL;
+        }
+        if (osu_metronome_sound.getString().length() > 0)
+        {
+                UString metPath = m_osu->getSkin()->getFilePath();
+                metPath.append(osu_metronome_sound.getString());
+                if (!env->fileExists(metPath))
+                {
+                        metPath = UString("./Metronome/");
+                        metPath.append(osu_metronome_sound.getString());
+                }
+                if (env->fileExists(metPath))
+                        m_metronomeSound = engine->getResourceManager()->loadSoundAbs(metPath, "OSU_METRONOME_SND", false, false);
+        }
+        m_fNextMetronomeTime = 0.0;
 
 	m_music->setLoop(false);
 	m_bIsPaused = false;
@@ -2289,13 +2326,19 @@ void OsuBeatmap::loadMusic(bool stream, bool prescan)
 
 void OsuBeatmap::unloadMusicInt()
 {
-	if (m_osu->getInstanceID() < 2)
-	{
-		engine->getSound()->stop(m_music);
-		engine->getResourceManager()->destroyResource(m_music);
-	}
+        if (m_osu->getInstanceID() < 2)
+        {
+                engine->getSound()->stop(m_music);
+                engine->getResourceManager()->destroyResource(m_music);
+                if (m_metronomeSound != NULL)
+                {
+                        engine->getSound()->stop(m_metronomeSound);
+                        engine->getResourceManager()->destroyResource(m_metronomeSound);
+                }
+        }
 
-	m_music = NULL;
+        m_music = NULL;
+        m_metronomeSound = NULL;
 }
 
 void OsuBeatmap::unloadObjects()

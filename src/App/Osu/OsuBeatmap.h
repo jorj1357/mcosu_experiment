@@ -250,19 +250,21 @@ protected:
 	// database
 	OsuDatabaseBeatmap *m_selectedDifficulty2;
 
-	// sound
-	Sound *m_music;
-	float m_fMusicFrequencyBackup;
-	long m_iCurMusicPos;
-	long m_iCurMusicPosWithOffsets;
-	bool m_bWasSeekFrame;
-	double m_fInterpolatedMusicPos;
-	double m_fLastAudioTimeAccurateSet;
-	double m_fLastRealTimeForInterpolationDelta;
-	int m_iResourceLoadUpdateDelayHack;
-	bool m_bForceStreamPlayback;
-	float m_fAfterMusicIsFinishedVirtualAudioTimeStart;
-	bool m_bIsFirstMissSound;
+        // sound
+        Sound *m_music;
+        Sound *m_metronomeSound;
+        float m_fMusicFrequencyBackup;
+        long m_iCurMusicPos;
+        long m_iCurMusicPosWithOffsets;
+        bool m_bWasSeekFrame;
+        double m_fInterpolatedMusicPos;
+        double m_fLastAudioTimeAccurateSet;
+        double m_fLastRealTimeForInterpolationDelta;
+        int m_iResourceLoadUpdateDelayHack;
+        bool m_bForceStreamPlayback;
+        float m_fAfterMusicIsFinishedVirtualAudioTimeStart;
+        bool m_bIsFirstMissSound;
+        double m_fNextMetronomeTime;
 
 	// health
 	bool m_bFailed;
